@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Simple Load Example</title>
+	<script type="text/javascript" src="../../simpleload.js"></script>
+</head>
+<body>
+
+	
+	<script type="text/javascript">
+	Load.get(["one.js", "two.js"]).get(function(){
+		new One();
+		new Two();
+	}).fetch();
+	</script>
+	
+</body>
+</html>
