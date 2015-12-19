@@ -4,14 +4,13 @@
  * Author	Keith - https://github.com/kpjf
  * Website	https://github.com/zuulinc/simpleload
  */
-var Load = (function() {
+window.Load = (function() {
 
-	var stack = new Array(),
-		deferred = new Array(),
-		queue = new Array(),
+	var stack = [],
+		deferred = [],
+		queue,
 		doc = document,
-		head = doc.getElementsByTagName('head')[0],
-		browser = null;
+		head = doc.getElementsByTagName('head')[0];
 	
 	function createElement(type, attributes) {
 		var el = doc.createElement(type);
@@ -21,43 +20,56 @@ var Load = (function() {
 		}
 		
 		return el;
-	};
+	}
 	
 	function loaded(loadedFile) {
+
+		if (null === queue) {
+			return;
+		}
+
+		var i=0, 
+			file = null,
+			n = queue.items.length;
 		
-		for (var i=0, file; file=queue.items[i]; i++) {
-			if(~loadedFile.indexOf(file)) {
-				queue.items.splice(i, 1);
-				break;
-			}
+		if (queue && queue.items) {
+			for (i; file=queue.items[i], i<n; i++) {
+				if(loadedFile.indexOf(file) !== -1) {
+					queue.items.splice(i, 1);
+					break;
+				}
+			}			
 		}
 		
 		if (queue.items.length === 0) {
 			if (queue.oncomplete) queue.oncomplete();
 			if (stack.length > 0 || deferred.length > 0) fetch();
 		}
-		
+	}
+
+	function scriptLoaded() {
+		if (!this.readyState || this.readyState === 'loaded' || this.readyState === 'complete') {
+			this.onreadystatechange = null;
+			if (!this.callbackExecuted) {
+				loaded(this.src);	
+			}
+			this.callbackExecuted = true;			
+		}
 	}
 	
 	function fetch() {
 	
 		queue = stack.length > 0 ? stack.shift() : (deferred.length > 0 ? deferred.shift() : null);
 		if (queue !== null) {
-		
 			if (typeof(queue.items) == 'function') {
 				queue.items();
 				fetch();
 			} else {
-				for (var i=0, file; file=queue.items[i]; i++) {
+				for (var i=0, file; file=queue.items[i], i<queue.items.length; i++) {
 				
 					var el = createElement('script', { src: file });
 					
-					el.onload = el.onreadystatechange = function() {
-						if (!this.readyState || this.readyState === 'loaded' || this.readyState === 'complete') {
-							this.onreadystatechange = null;
-							loaded(this.src);
-						}
-					};
+					el.onload = el.onreadystatechange = scriptLoaded;
 					
 					head.appendChild(el);
 				}
