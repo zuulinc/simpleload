@@ -9,12 +9,13 @@ window.Load = (function() {
 	var stack = [],
 		deferred = [],
 		queue,
+		errAt = 1000,
 		doc = document,
 		head = doc.getElementsByTagName('head')[0];
 	
 	function createElement(type, attributes) {
 		var el = doc.createElement(type);
-		
+
 		for (var attr in attributes) {
 			el.setAttribute(attr, attributes[attr]);
 		}
@@ -22,8 +23,7 @@ window.Load = (function() {
 		return el;
 	}
 	
-	function loaded(loadedFile) {
-
+	function loaded(loadedFile, isError) {
 		if (null === queue) {
 			return;
 		}
@@ -38,7 +38,7 @@ window.Load = (function() {
 					queue.items.splice(i, 1);
 					break;
 				}
-			}			
+			}
 		}
 		
 		if (queue.items.length === 0) {
@@ -47,13 +47,15 @@ window.Load = (function() {
 		}
 	}
 
-	function scriptLoaded() {
+	function scriptLoaded() {		
+		
 		if (!this.readyState || this.readyState === 'loaded' || this.readyState === 'complete') {
 			this.onreadystatechange = null;
 			if (!this.callbackExecuted) {
 				loaded(this.src);	
 			}
-			this.callbackExecuted = true;			
+			this.callbackExecuted = true;
+			clearTimeout(this.timer);
 		}
 	}
 	
@@ -68,12 +70,20 @@ window.Load = (function() {
 				for (var i=0, file; file=queue.items[i], i<queue.items.length; i++) {
 				
 					var el = createElement('script', { src: file });
-					
+					el.timer = setTimeout((function(f){
+						return function() {
+							if (!this.callbackExecuted) {
+								loaded(f, true);
+							}
+							this.callbackExecuted = true;
+						};
+					}(file)), errAt);
+
 					el.onload = el.onreadystatechange = scriptLoaded;
 					
 					head.appendChild(el);
 				}
-			}			
+			}
 		}
 	}
 	
@@ -98,7 +108,7 @@ window.Load = (function() {
 			if (typeof(deferred)=='undefined') deferred = false;
 			
 			add(items, oncomplete, deferred);
-			return this;			
+			return this;
 		},
 		
 		defer: function(items, oncomplete) {
